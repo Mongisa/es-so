@@ -5,6 +5,8 @@
 
 #define N 5
 
+void message_read(int*,int*,int);
+
 int main() {
     int fd[2], n, num[N];
 
@@ -18,31 +20,56 @@ int main() {
         return 1;
     } else if (pid == 0) {
         // Child process
-	int a;
         close(fd[0]); // Close read pipe
 	for(int i=0;i<N;i++) {
-		printf("Inserisci numero [%d]: ",i+1);
-		fflush(stdout);	
-		scanf(" %d",&a);
+		printf("Inserisci numero [%d]: ",i+1);	
+		scanf(" %d",&num[i]);
 	}
-        // Compose message
+	int sent = (int)write(fd[1],num,2*sizeof(int));
+	if(sent != 2*sizeof(int)) {
+		printf("Sending error\n");
+		return 1;
+	}
+
+	sleep(1);
+
+	sent = (int) write(fd[1],num+2,3*sizeof(int));
+	if(sent != 3*sizeof(int)) {
+		printf("Sending error 2\n");
+		return 1;
+	}
+
         close(fd[1]);
         return 0;
     } else {
         // Father process
         close(fd[1]); // Close write pipe
-	/*for(int i=0;i<50;i++) {
-        	int received = (int)read(fd[0], &dato, sizeof(dato));
-        	if (received < 0) {
-            		printf("Receiving error!\n");
-        	} else {
-            		if (received < sizeof(dato))
-               			printf("Messagge incomplete!\n");
-            		// verify bytes received
-            		printf("x:%.2f y:%.2f z:%.2f\n",dato.x,dato.y,dato.z);
-        	}
-	}*/
+       	
+	message_read(num,fd,N);
+	for(int i=0;i<N;i++) {
+		printf("Ricevuto [%d]: %d\n",i+1,num[i]);
+	}
+
         close(fd[0]);
         return 0;
     }
+}
+
+void message_read(int p[], int fd[], int el) {
+	
+	int count = 0;
+
+	do {
+		int received = (int)read(fd[0],p+count/sizeof(int),el*sizeof(int));
+	
+		if(received < 0 ) {
+			printf("Receiving error!\n");
+		} else if(received < sizeof(int)) {
+			printf("Received partial message\n");
+		} else {
+			count += received;
+		}
+
+
+	} while(count != el*sizeof(int));
 }
