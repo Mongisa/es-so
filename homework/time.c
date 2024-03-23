@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
 		printf("Tempo esecuzione %s: %ld microsec\n",argv[1],delta);
 		shmdt(array);
 	} else if(pid == 0) {
+		//Child's code
 		long int *array = shmat(segment_id,NULL,0); 
 		int status = system(argv[1]);
 		if(status < 0) {
