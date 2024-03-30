@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <sys/shm.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <string.h>
 
 int main(int argc, char* argv[]) {
 	pid_t pid;
+	int fd[2];
 	struct timeval current;
 
 	if(argc == 1) {
@@ -16,9 +16,8 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int segment_id=shmget(IPC_PRIVATE,sizeof(current),S_IRUSR | S_IWUSR);
-	if(segment_id<0) {
-		printf("Errore in shmget\n");
+	if(pipe(fd)<0) {
+		printf("Pipe error!\n");
 		return 1;
 	}
 
@@ -31,31 +30,42 @@ int main(int argc, char* argv[]) {
 
 	if(pid>0) {
 		//Father's code
+		close(fd[1]);
+
+		long int time;
+
 		gettimeofday(&current,NULL);
 		wait(NULL);
-		printf("Comando completato!\n");
-		long int *array = shmat(segment_id,NULL,0);
+		printf("Command completed!\n");
+		int received = read(fd[0],&time,sizeof(long int));
 
-		long int delta = array[0] - current.tv_usec;
+		if(received < sizeof(long int)) {
+			printf("Error occurred while receiving!\n");
+			return 1;
+		}
+
+		long int delta = time - current.tv_usec;
 
 		printf("Tempo esecuzione %s: %ld microsec\n",argv[1],delta);
-		shmdt(array);
+		close(fd[0]);
 	} else if(pid == 0) {
 		//Child's code
-		long int *array = shmat(segment_id,NULL,0);
-		gettimeofday(&current,NULL); 
+		close(fd[0]);
+ 		gettimeofday(&current,NULL);
 		int status = system(argv[1]);
 		if(status < 0) {
 			printf("Errore durante l'esecuzione del comando\n");
 			return 1;
 		}
-		array[0]=current.tv_usec;
-		shmdt(array);
+		int sent = write(fd[1],&current.tv_usec,sizeof(long int));
+
+		if(sent<sizeof(long int)) {
+			printf("Error occurred while sending!\n");
+			return 1;
+		}
+		close(fd[1]);
 		return 0;
 	}
-
-	/*Deallocazione area di memoria*/
-	shmctl(segment_id, IPC_RMID, NULL);
 
 	return 0;
 }
