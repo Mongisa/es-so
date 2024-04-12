@@ -21,6 +21,10 @@ void reverse_str(char *str) {
 	}
 }
 
+int is_palindrome(char *str1, char *str2) {
+	return (strcmp(str1,str2) == 0) ? 1 : 0;
+}
+
 int main(int argc, char *argv[]) {
 	char *string;
 	
@@ -49,8 +53,27 @@ int main(int argc, char *argv[]) {
 	if(pid == 0) {
 		//Child process
 		shared_data *p = (shared_data *)shmat(segment_id, NULL, 0);
-		reverse_str(string);
 		strcpy(p->str,string);
+		reverse_str(p->str);
+
+		pid_t pid2 = fork();
+		if(pid2<0) {
+			printf("Fork error!\n");
+			shmctl(segment_id, IPC_RMID, NULL);
+			return 1;
+		}
+
+		if(pid2 == 0) {
+			//Child child code
+			if(is_palindrome(string,p->str) == 1) {
+				printf("La stringa è palindroma!\n");
+			} else {
+				printf("La stringa non è palindroma!\n");
+			}
+		} else {
+			//Child code
+			wait(NULL);
+		}
 
 		shmdt(p);
 	} else {
