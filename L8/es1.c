@@ -48,9 +48,8 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	//Per thread multipli converrebbe usare un for
-	pthread_join(tid[0], NULL);
-	pthread_join(tid[1], NULL);
+	for(int i=0;i<2;i++)
+		pthread_join(tid[i], NULL);
 
 	printf("Ecco il vettore risultante: ");
 
