@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if (($#!=1));then
-	echo "No argument!"
+	echo "SYNTAX: es7.sh <filename>"
 	exit 1
 fi
 
